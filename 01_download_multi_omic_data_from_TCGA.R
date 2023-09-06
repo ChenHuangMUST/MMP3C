@@ -1,9 +1,5 @@
-setwd("D:/tcga/tcga/somatic/methylation//")
 library(downloader)
 tcga_list<- c( "TCGA-BRCA", "TCGA-COAD", "TCGA-HNSC", "TCGA-KICH", "TCGA-KIRC", "TCGA-KIRP", "TCGA-LIHC","TCGA-LUAD", "TCGA-LUSC", "TCGA-PRAD", "TCGA-STAD", "TCGA-THCA", "TCGA-UCEC")
-
-#load("D:/tcga/psm_sample/top200/top200.Rdata")
-
 #https://gdc-hub.s3.us-east-1.amazonaws.com/download/TCGA-BRCA.survival.tsv
 for (i in 1:13){
   tcga<-tcga_list[i]
