@@ -81,3 +81,96 @@ for (l in 1:13){
   dif_lst[[l]]<-wang
   #write.table(dat,file = paste("D:/tcga/model/reconstruct_tpm/tpm/tpm_dif/",tcga,"paths_dif.txt",sep = ""),sep = "\t",col.names = T,row.names = F,quote = F)
 }
+###
+library(tidyverse)
+library(coin)
+###Chi-square test for metabolic pathway pairwise between tumor and normal tissues
+for (l in 1:13){
+  dat<-vector(mode = "list")
+  p_value<-vector()
+  or <- vector()
+  tcga<-tcga_list[l]
+  #cancer<-read.table(file = paste("H:/tcga/model/",tcga,".txt",sep = ""),sep = "\t",header = T,check.names = F)
+  path_pairs<-read.table(file = paste("D:/tcga/model/reconstruct_tpm/tpm/tpm_dif/",tcga,"paths_dif.txt",sep = ""),sep = "\t",header = T,check.names = F)
+  typ = substring(colnames(path_pairs),14,16)
+  #print(table(typ))
+  wang <- 0.1
+  for (j in 1:3486) {
+    x = 0
+    dif <- as.numeric(path_pairs[j,])
+    type <- typ
+    if(sum(dif <= -wang | dif >= wang) >= length(dif)*0.8){
+      dif <- dif[dif <= -wang | dif >= wang]
+      type <- typ[dif <= -wang | dif >= wang]
+      print("delete");print(j)
+    }
+    
+    dif = ifelse(dif > 0, 0, 1)
+      
+      a<-dif[type == "01A"] %>% .[. == 0] %>% length()
+      b<-dif[type == "11A"] %>% .[. == 0] %>% length()
+      c<-dif[type == "01A"] %>% .[. == 1] %>% length()
+      d<-dif[type == "11A"] %>% .[. == 1] %>% length()
+      
+      ###Fisher exact test for specific metabolic pathway pairwise comparison
+      q<-min(((a+c)*(a+b)/(a+b+c+d)),((b+d)*(a+b)/(a+b+c+d)),((a+b)*(d+b)/(a+b+c+d)),((d+c)*(d+b)/(a+b+c+d)))
+      if(q < 5){print(c(i,j))
+        x<-x+1
+        dat[[x]]<-c(i,j)
+        chisq1<-fisher.test(matrix(c(a,b,c,d),nrow = 2))$p.value
+        #print(matrix(c(a,b,c,d),nrow = 2))
+        chisq2<-fisher.test(matrix(c(c,d,a,b),nrow = 2))$p.value 
+      }
+      else{
+        chisq1<-chisq_test(as.table(matrix(c(a,b,c,d),nrow = 2)),distribution = "exact") %>% pvalue() %>% as.numeric()
+        #print(matrix(c(a,b,c,d),nrow = 2))
+        chisq2<-chisq_test(as.table(matrix(c(c,d,a,b),nrow = 2)),distribution = "exact") %>% pvalue() %>% as.numeric()
+      }
+      or1 = (a*d)/(b*c)
+      or2 = (b*c)/(a*d)
+      p_value<-append(p_value,c(chisq1,chisq2))
+      or <- append(or,c(or1,or2))
+  }   
+  #lst<-do.call("rbind",lst)
+  chiq_adjust1<-p.adjust(p_value[seq(1,6971,2)],method = "fdr")
+  chiq_adjust2<-p.adjust(p_value[seq(2,6972,2)],method = "fdr")
+  write.table(cbind(p_value[seq(1,6971,2)],p_value[seq(2,6972,2)],chiq_adjust1,chiq_adjust2,or[seq(1,6971,2)],or[seq(2,6972,2)]),file = paste("D:/tcga/model/reconstruct_tpm/tpm/tpm_test/",tcga,"path_pairs.txt",sep = ""),sep = "\t",col.names = F,row.names = F)
+  dat<-do.call("rbind",dat)
+  if(length(dat > 0)){write.table(dat,file = paste("D:/tcga/model/reconstruct_tpm/tpm/",tcga,"path_fisher.txt",sep = ""),sep = "\t",col.names = F,row.names = F)
+  }}
+####Cramer's coefficient
+#tcga_list<- c( "TCGA-BRCA", "TCGA-COAD", "TCGA-HNSC", "TCGA-KICH", "TCGA-KIRC", "TCGA-KIRP", "TCGA-LIHC","TCGA-LUAD", "TCGA-LUSC", "TCGA-PRAD", "TCGA-STAD", "TCGA-THCA", "TCGA-UCEC")
+x = 0
+datv<-vector(mode = "list")
+for (l in 1:13){
+
+  tcga<-tcga_list[l]
+  #cancer<-read.table(file = paste("H:/tcga/model/",tcga,".txt",sep = ""),sep = "\t",header = T,check.names = F)
+  path_pairs<-read.table(file = paste("D:/tcga/model/reconstruct_tpm/tpm/tpm_dif/",tcga,"paths_dif.txt",sep = ""),sep = "\t",header = T,check.names = F)
+  
+  typ = substring(colnames(path_pairs),14,16)
+  #print(table(typ))
+  wang <- 0.1
+  
+  v<-vector()
+  for (j in 1:3486) {
+    
+    
+    dif <- as.numeric(path_pairs[j,])
+    type <- typ
+    if(sum(dif <= -wang | dif >= wang) >= length(dif)*0.8){
+      dif <- dif[dif <= -wang | dif >= wang]
+      type <- typ[dif <= -wang | dif >= wang]
+      print("delete");x<-x+1;print(x)
+    }
+    
+    dif = ifelse(dif > 0, 0, 1)
+    
+    a<-dif[type == "01A"] %>% .[. == 0] %>% length()
+    b<-dif[type == "11A"] %>% .[. == 0] %>% length()
+    c<-dif[type == "01A"] %>% .[. == 1] %>% length()
+    d<-dif[type == "11A"] %>% .[. == 1] %>% length()
+    v <-append(v, assocstats(matrix(c(a,b,c,d),nrow = 2))$cramer)
+  }
+  datv[[l]]<-v
+  }
